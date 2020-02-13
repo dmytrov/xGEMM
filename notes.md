@@ -1,0 +1,7 @@
+ - Strided arrays
+ - Thread pool, pinned to CPUs. Pool config file
+ - C++ only kernels, cache friendly
+ - Non-reentrant kernels
+ - Kernel queue
+ - Task-to-kernel-queue algorithms
+ - Transpostion, xGEMM
