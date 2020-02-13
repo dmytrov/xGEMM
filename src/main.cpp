@@ -1,5 +1,5 @@
 
-#include "StridedArray.h"
+#include "strided_array.h"
 #include <iostream>
 
 //using namespace std;
