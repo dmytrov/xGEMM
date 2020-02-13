@@ -37,3 +37,5 @@ CMakeCache.txt
 CMakeFiles
 
 temp
+bin
+Makefile
