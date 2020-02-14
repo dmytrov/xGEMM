@@ -40,10 +40,18 @@ public:
 };
 
 
-class LargeJob: public Job
+class BarrierJob: public Job
 {
+    pthread_barrier_t *pbarrier;
+
 public:
-    void execute() override {};
+    BarrierJob(pthread_barrier_t *_pbarrier) {
+        pbarrier = _pbarrier;
+    }
+
+    void execute() override {
+        pthread_barrier_wait(pbarrier);
+    };
 };
 
 
@@ -57,6 +65,7 @@ private:
     sem_t sem;
     pthread_mutex_t mtx_in;
     pthread_mutex_t mtx_out;
+    pthread_cond_t cond_empty;
     queue<Job*> *tasks;
     pthread_t cThread[NUM_WORKERS];
 public:
@@ -66,6 +75,8 @@ public:
     void add_task(Job *pJob);
     Job* get_task();
     static void *worker(void *parm);
+    void wait_queue_empty();
+    void wait_tasks_complete();
     void wait_workers_exit();
 };
 
@@ -96,6 +107,23 @@ void ThreadPool::wait_workers_exit()
         pthread_join(cThread[i], NULL);
 }
 
+void ThreadPool::wait_queue_empty()
+{
+    pthread_mutex_lock(&mtx_in);
+    pthread_cond_wait(&cond_empty, &mtx_in);
+    pthread_mutex_unlock(&mtx_in);
+}
+
+void ThreadPool::wait_tasks_complete()
+{
+    pthread_barrier_t barrier;
+    pthread_barrier_init(&barrier, NULL, NUM_WORKERS+1);
+    for (int i=0; i<NUM_WORKERS; i++)
+        add_task(new BarrierJob(&barrier));
+    pthread_barrier_wait(&barrier);
+    pthread_barrier_destroy(&barrier);
+}
+
 ThreadPool::~ThreadPool()
 {
 }
@@ -104,13 +132,11 @@ void* ThreadPool::worker(void* parm) {
     pthread_t self;
     self = pthread_self();
     ThreadPool *tp = (ThreadPool*)parm;
-    std::cout << "Process " << self << " starting" << std::endl;
     while (1)
     {
         Job *pJob = tp->get_task();
         if (pJob == NULL){
-            std::cout << "Process " << self << " exiting" << std::endl;
-            return NULL;
+            pthread_exit(0);
         }
         pJob->execute();
     }
@@ -120,7 +146,6 @@ void* ThreadPool::worker(void* parm) {
 void ThreadPool::add_task(Job *pJob)
 {
     pthread_mutex_lock(&mtx_in);
-    //std::cout << "Put " << i << std::endl;
     tasks->push(pJob);
     sem_post(&sem);
     pthread_mutex_unlock(&mtx_in);
@@ -128,7 +153,7 @@ void ThreadPool::add_task(Job *pJob)
 
 Job* ThreadPool::get_task()
 {  
-    pthread_mutex_lock(&mtx_out);
+    pthread_mutex_lock(&mtx_out);  // output queue exclusive access
     sem_wait(&sem);
     pthread_mutex_lock(&mtx_in);
     Job* pJob = tasks->front();
