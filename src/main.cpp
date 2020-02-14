@@ -11,18 +11,9 @@ int main(void)
     int n = 1000;
     Mfloat a(n, n);
     Mfloat b(n, n);
-    
-    MMfloatKernelJob mmprod;
-    mmprod.a = &a;
-    mmprod.ar0 = 0;
-    mmprod.ar1 = a.d0;
-    mmprod.b = &b;
-    mmprod.bc0 = 0;
-    mmprod.bc1 = b.d1;
-
     Mfloat c = Mfloat(a.d0, b.d1);
-    mmprod.c = &c;
-    mmprod.execute();
+    
+    MMfloat(&a, &b, &c);
     c.print();
     
     return 0;
