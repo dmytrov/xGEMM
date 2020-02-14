@@ -25,6 +25,17 @@ public:
 };
 
 
+class EmptyJob: public Job
+{
+public:
+    EmptyJob(){
+    }
+
+    void execute() override {
+    };
+};
+
+
 class PrintJob: public Job
 {
 public:
