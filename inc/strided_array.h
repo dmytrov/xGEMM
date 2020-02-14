@@ -77,6 +77,8 @@ StridedArray<T>::~StridedArray() {
 
 template<class T>
 void StridedArray<T>::print() {
+    printf("size: [%dx%d], ", d0, d1);
+    printf("stride: [%dx%d] \n", s0, s1);
     std::cout << "[";
     for (int i=0; i<d0; i++) {
         for (int j=0; j<d1; j++) {
