@@ -6,7 +6,7 @@
 #include "thread_pool.h"
 #include "linalg.h"
 
-#define NLINES 16
+
 
 ThreadPool tp;
 
