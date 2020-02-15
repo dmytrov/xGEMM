@@ -6,6 +6,8 @@
 #include "thread_pool.h"
 #include "linalg.h"
 
+#define NLINES 16
+
 ThreadPool tp;
 
 
@@ -32,7 +34,7 @@ void MMfloatJob::execute_unoptimized()
 void MMfloatJob::execute_optimized()
 {
     // Use 8 columns to stay within chache
-    if (bc1-bc0 != 8)
+    if (bc1-bc0 != NLINES)
         throw std::invalid_argument("Number of columns must be 8");
 
     
@@ -40,8 +42,8 @@ void MMfloatJob::execute_optimized()
     for (int i=ar0; i<ar1; i++) {  // rows of a
         float *ai = a->data + i*a->s0;  // a[i, :] row
         
-        float acc[8] __attribute__((aligned(32))); // accumulator. Aligned
-        std::memset(acc, 0, 8*sizeof(float));
+        float acc[NLINES] __attribute__((aligned(32))); // accumulator. Aligned
+        std::memset(acc, 0, NLINES*sizeof(float));
         
         for (int j=bc0; j<bc1; j++) {  // columns of b
             float *bj = b->data + j*b->s0;
@@ -67,7 +69,7 @@ void MMfloatJob::execute_optimized()
                                 ai[15] * bj[15];
             }
         } 
-        std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(float) * 8); 
+        std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(float) * NLINES); 
     }
 }
 
@@ -75,8 +77,8 @@ void MMfloatJob::execute_optimized()
 void MMfloat(Mfloat *a, Mfloat *b, Mfloat *c)
 {
     // Partition on multiple independent tasks
-    for (int j=0; j<b->d1; j+=8) {  // columns of b
-        tp.add_task(new MMfloatJob(a, 0, a->d0, b, j, j+8, c));
+    for (int j=0; j<b->d1; j+=NLINES) {  // columns of b
+        tp.add_task(new MMfloatJob(a, 0, a->d0, b, j, j+NLINES, c));
     }
     tp.wait_tasks_complete();
 }
