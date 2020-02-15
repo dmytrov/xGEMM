@@ -41,26 +41,20 @@ public:
             for (int j=bc0; j<bc1; j++) {  // columns of b
                 T *bj = b->data + j*b->s0;
 
-                for (int k=0; k<a->d1; k+=16) {  // items
-                    T *pa = ai+k;
-                    T *pb = bj+k;
-                    acc[j-bc0] +=   pa[0] * pb[0] +
-                                    pa[1] * pb[1] +
-                                    pa[2] * pb[2] +
-                                    pa[3] * pb[3] +
-                                    pa[4] * pb[4] +
-                                    pa[5] * pb[5] +
-                                    pa[6] * pb[6] +
-                                    pa[7] * pb[7] + 
-                                    pa[8] * pb[8] +
-                                    pa[9] * pb[9] +
-                                    pa[10] * pb[10] +
-                                    pa[11] * pb[11] +
-                                    pa[12] * pb[12] +
-                                    pa[13] * pb[13] +
-                                    pa[14] * pb[14] +
-                                    pa[15] * pb[15];
+                T dot = 0;
+                int k = 0;
+                while (k < a->d1) {
+                    dot +=  ai[k+0] * bj[k+0] +
+                            ai[k+1] * bj[k+1] +
+                            ai[k+2] * bj[k+2] +
+                            ai[k+3] * bj[k+3] +
+                            ai[k+4] * bj[k+4] +
+                            ai[k+5] * bj[k+5] +
+                            ai[k+6] * bj[k+6] +
+                            ai[k+7] * bj[k+7];
+                    k += 8;
                 }
+                acc[j-bc0] = dot;
             } 
             std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(T) * BLOCKSIZE); 
         }
