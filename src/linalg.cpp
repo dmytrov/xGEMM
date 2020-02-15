@@ -1,3 +1,7 @@
+#pragma GCC optimize("O3","unroll-loops","omit-frame-pointer","inline") //Optimization flags
+#pragma GCC option("arch=native","tune=native","no-zero-upper") //Enable AVX
+#pragma GCC target("avx")  //Enable AVX
+
 #include <immintrin.h>
 #include "thread_pool.h"
 #include "linalg.h"
@@ -42,7 +46,7 @@ void MMfloatJob::execute_optimized()
         for (int j=bc0; j<bc1; j++) {  // columns of b
             float *bj = b->data + j*b->s0;
 
-            for (int k=0; k<a->d1; k+=8) {  // items
+            for (int k=0; k<a->d1; k+=16) {  // items
                 float *pa = ai+k;
                 float *pb = bj+k;
                 acc[j-bc0] +=   ai[0] * bj[0] +
@@ -52,7 +56,15 @@ void MMfloatJob::execute_optimized()
                                 ai[4] * bj[4] +
                                 ai[5] * bj[5] +
                                 ai[6] * bj[6] +
-                                ai[7] * bj[7];
+                                ai[7] * bj[7] + 
+                                ai[8] * bj[8] +
+                                ai[9] * bj[9] +
+                                ai[10] * bj[10] +
+                                ai[11] * bj[11] +
+                                ai[12] * bj[12] +
+                                ai[13] * bj[13] +
+                                ai[14] * bj[14] +
+                                ai[15] * bj[15];
             }
         } 
         std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(float) * 8); 
