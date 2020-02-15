@@ -6,40 +6,6 @@
 
 #define NLINES 16
 extern ThreadPool tp;
-typedef StridedArray<float> Mfloat;
-typedef StridedArray<double> Mdouble;
-
-class MMfloatJob : public Job
-{
-    // c = dot(a, b)
-    //
-    //
-
-public:
-    Mfloat *a;
-    int ar0, ar1;
-    Mfloat *b;
-    int bc0, bc1;
-    Mfloat *c;
-    
-    MMfloatJob(Mfloat *_a, int _ar0, int _ar1, Mfloat *_b, int _bc0, int _bc1, Mfloat *_c) {
-        a = _a;
-        ar0 = _ar0;
-        ar1 = _ar1;
-        b = _b;
-        bc0 = _bc0;
-        bc1 = _bc1;
-        c = _c;
-    }
-    void execute() override;
-    void execute_unoptimized();
-    void execute_optimized();
-};
-
-
-void MMfloat(Mfloat *a, Mfloat *b, Mfloat *c);
-
-
 
 template<class T>
 class MMJob : public Job
@@ -64,7 +30,7 @@ public:
     void execute() override {
          // Use 8 columns to stay within chache
         if (bc1-bc0 != NLINES)
-            throw std::invalid_argument("Number of columns must be 8");
+            throw std::invalid_argument("Number of columns must be NLINES");
         
         T acc[NLINES] __attribute__((aligned(32))); // accumulator. Aligned    
         
@@ -110,7 +76,5 @@ void MM(StridedArray<T> *a, StridedArray<T> *b, StridedArray<T> *c)
     }
     tp.wait_tasks_complete();
 }
-
-
 
 #endif // LINALG_H

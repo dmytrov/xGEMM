@@ -5,7 +5,7 @@
 #include "linalg.h"
 
 template<class T>
-void test()
+double test()
 {
     int n = 100*16;
     int m = 1;
@@ -27,16 +27,13 @@ void test()
 
     double dt = double(t.elapsed().wall) / 1.0e9;
     double flops = 2 * m * pow(n, 3) / dt;
-    cout << (1.0e-9 * flops) << " GFLOPS" << endl;
+    return flops;
 }
 
 int main(void)
 {
-    printf("int:    ");
-    test<int>();
-    printf("float:  ");
-    test<float>();
-    printf("double: ");
-    test<double>();
+    printf("int:    %f GFLOPS\n", 1.0e-9 * test<int>());
+    printf("float:  %f GFLOPS\n", 1.0e-9 * test<float>());
+    printf("double: %f GFLOPS\n", 1.0e-9 * test<double>());
     return 0;
 }
