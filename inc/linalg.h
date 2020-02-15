@@ -65,11 +65,11 @@ public:
          // Use 8 columns to stay within chache
         if (bc1-bc0 != NLINES)
             throw std::invalid_argument("Number of columns must be 8");
-
+        
+        T acc[NLINES] __attribute__((aligned(32))); // accumulator. Aligned    
+        
         for (int i=ar0; i<ar1; i++) {  // rows of a
             T *ai = a->data + i*a->s0;  // a[i, :] row
-            
-            T acc[NLINES] __attribute__((aligned(32))); // accumulator. Aligned
             std::memset(acc, 0, NLINES*sizeof(T));
             
             for (int j=bc0; j<bc1; j++) {  // columns of b
@@ -78,22 +78,22 @@ public:
                 for (int k=0; k<a->d1; k+=16) {  // items
                     T *pa = ai+k;
                     T *pb = bj+k;
-                    acc[j-bc0] +=   ai[0] * bj[0] +
-                                    ai[1] * bj[1] +
-                                    ai[2] * bj[2] +
-                                    ai[3] * bj[3] +
-                                    ai[4] * bj[4] +
-                                    ai[5] * bj[5] +
-                                    ai[6] * bj[6] +
-                                    ai[7] * bj[7] + 
-                                    ai[8] * bj[8] +
-                                    ai[9] * bj[9] +
-                                    ai[10] * bj[10] +
-                                    ai[11] * bj[11] +
-                                    ai[12] * bj[12] +
-                                    ai[13] * bj[13] +
-                                    ai[14] * bj[14] +
-                                    ai[15] * bj[15];
+                    acc[j-bc0] +=   pa[0] * pb[0] +
+                                    pa[1] * pb[1] +
+                                    pa[2] * pb[2] +
+                                    pa[3] * pb[3] +
+                                    pa[4] * pb[4] +
+                                    pa[5] * pb[5] +
+                                    pa[6] * pb[6] +
+                                    pa[7] * pb[7] + 
+                                    pa[8] * pb[8] +
+                                    pa[9] * pb[9] +
+                                    pa[10] * pb[10] +
+                                    pa[11] * pb[11] +
+                                    pa[12] * pb[12] +
+                                    pa[13] * pb[13] +
+                                    pa[14] * pb[14] +
+                                    pa[15] * pb[15];
                 }
             } 
             std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(T) * NLINES); 
