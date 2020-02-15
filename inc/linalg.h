@@ -4,7 +4,7 @@
 #include "strided_array.h"
 #include "thread_pool.h"
 
-#define NLINES 16
+#define BLOCKSIZE 8
 extern ThreadPool tp;
 
 template<class T>
@@ -29,14 +29,14 @@ public:
 
     void execute() override {
          // Use 8 columns to stay within chache
-        if (bc1-bc0 != NLINES)
-            throw std::invalid_argument("Number of columns must be NLINES");
+        if (bc1-bc0 != BLOCKSIZE)
+            throw std::invalid_argument("Number of columns must be BLOCKSIZE");
         
-        T acc[NLINES] __attribute__((aligned(32))); // accumulator. Aligned    
+        T acc[BLOCKSIZE] __attribute__((aligned(32))); // accumulator. Aligned    
         
         for (int i=ar0; i<ar1; i++) {  // rows of a
             T *ai = a->data + i*a->s0;  // a[i, :] row
-            std::memset(acc, 0, NLINES*sizeof(T));
+            std::memset(acc, 0, BLOCKSIZE*sizeof(T));
             
             for (int j=bc0; j<bc1; j++) {  // columns of b
                 T *bj = b->data + j*b->s0;
@@ -62,7 +62,7 @@ public:
                                     pa[15] * pb[15];
                 }
             } 
-            std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(T) * NLINES); 
+            std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(T) * BLOCKSIZE); 
         }
     }
 };
@@ -71,9 +71,9 @@ template<class T>
 void MM(StridedArray<T> *a, StridedArray<T> *b, StridedArray<T> *c)
 {
     // Partition on multiple independent tasks
-    for (int j=0; j<b->d1; j+=NLINES) {  // columns of b
-        tp.add_task(new MMJob<T>(a, 0, a->d0, b, j, j+NLINES, c));
-    }
+    for (int i=0; i<a->d0; i+=BLOCKSIZE)  // columns of b
+        for (int j=0; j<b->d1; j+=BLOCKSIZE)  // columns of b
+            tp.add_task(new MMJob<T>(a, i, i+BLOCKSIZE, b, j, j+BLOCKSIZE, c));
     tp.wait_tasks_complete();
 }
 
