@@ -40,19 +40,21 @@ void MMfloatJob::execute_optimized()
         std::memset(acc, 0, 8*sizeof(float));
         
         for (int j=bc0; j<bc1; j++) {  // columns of b
-            float *bj = b->data + j;
-        
+            float *bj = b->data + j*b->s0;
+
             for (int k=0; k<a->d1; k+=8) {  // items
-                acc[j-bc0] +=   ai[k+0] * bj[(k+0)*b->s0] +
-                                ai[k+1] * bj[(k+1)*b->s0] +
-                                ai[k+2] * bj[(k+2)*b->s0] +
-                                ai[k+3] * bj[(k+3)*b->s0] +
-                                ai[k+4] * bj[(k+4)*b->s0] +
-                                ai[k+5] * bj[(k+5)*b->s0] +
-                                ai[k+6] * bj[(k+6)*b->s0] +
-                                ai[k+7] * bj[(k+7)*b->s0];
+                float *pa = ai+k;
+                float *pb = bj+k;
+                acc[j-bc0] +=   ai[0] * bj[0] +
+                                ai[1] * bj[1] +
+                                ai[2] * bj[2] +
+                                ai[3] * bj[3] +
+                                ai[4] * bj[4] +
+                                ai[5] * bj[5] +
+                                ai[6] * bj[6] +
+                                ai[7] * bj[7];
             }
-        }
+        } 
         std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(float) * 8); 
     }
 }

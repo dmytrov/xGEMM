@@ -16,7 +16,7 @@ using namespace std;
 #define handle_error(msg) \
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
-#define NUM_WORKERS 4
+#define NUM_WORKERS 2
 
 class Job
 {

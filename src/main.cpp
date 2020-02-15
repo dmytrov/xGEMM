@@ -11,7 +11,8 @@ int main(void)
     Mfloat b(n, n, 1);
     Mfloat c = Mfloat(a.d0, b.d1);
     
-    MMfloat(&a, &b, &c);
+    for (int i=0; i<100; i++)
+       MMfloat(&a, &b, &c);
     
     return 0;
 }
