@@ -14,8 +14,8 @@
   #define BLOCKSIZE_A 2
   #define BLOCKSIZE_B 512
 #elif ALG == 3
-  #define BLOCKSIZE_A 8
-  #define BLOCKSIZE_B 32
+  #define BLOCKSIZE_A 2
+  #define BLOCKSIZE_B 512
 #endif
 
 
@@ -115,8 +115,8 @@ public:
             for (int i=0; i<ar1-ar0; ++i) {  // rows of a
                 T *__restrict__ pc = c->data + (ar0+i)*c->s0 + bc0;
                 T * pa = ai + i*a->s0;
+                __m256 regA = _mm256_broadcast_ss(pa);
                 for (int j=0; j<bc1-bc0; j+=8) {
-                    __m256 regA = _mm256_broadcast_ss(pa);
                     __m256 regB = _mm256_load_ps(bj+j);
                     __m256 regC = _mm256_load_ps(pc+j);
                     __m256 regAB = _mm256_mul_ps(regA, regB);
