@@ -149,13 +149,13 @@ public:
         int cstride = c->s0;
         T *__restrict__ pc = c->data + ar0*cstride + bc0;
         __m256 regC0 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC1 = _mm256_load_ps(pc + 1*cstride);
-        __m256 regC2 = _mm256_load_ps(pc + 2*cstride);
-        __m256 regC3 = _mm256_load_ps(pc + 3*cstride);
-        __m256 regC4 = _mm256_load_ps(pc + 4*cstride);
-        __m256 regC5 = _mm256_load_ps(pc + 5*cstride);
-        __m256 regC6 = _mm256_load_ps(pc + 6*cstride);
-        __m256 regC7 = _mm256_load_ps(pc + 7*cstride);
+        __m256 regC1 = _mm256_load_ps(pc + 0*cstride);
+        __m256 regC2 = _mm256_load_ps(pc + 0*cstride);
+        __m256 regC3 = _mm256_load_ps(pc + 0*cstride);
+        __m256 regC4 = _mm256_load_ps(pc + 0*cstride);
+        __m256 regC5 = _mm256_load_ps(pc + 0*cstride);
+        __m256 regC6 = _mm256_load_ps(pc + 0*cstride);
+        __m256 regC7 = _mm256_load_ps(pc + 0*cstride);
         T *__restrict__ pd = c->data + ar0*cstride + bc0 + 8;
         __m256 regD0 = _mm256_load_ps(pd + 0*cstride);
         __m256 regD1 = _mm256_load_ps(pd + 1*cstride);
@@ -166,40 +166,44 @@ public:
         __m256 regD6 = _mm256_load_ps(pd + 6*cstride);
         __m256 regD7 = _mm256_load_ps(pd + 7*cstride);
 
-        
+        T *ai0 = a->data + ar0*a->s0 + 0*astride;  // a[i, :] row
+        T *ai1 = a->data + ar0*a->s0 + 1*astride;
+        T *ai2 = a->data + ar0*a->s0 + 2*astride;
+        T *ai3 = a->data + ar0*a->s0 + 3*astride;
+        T *ai4 = a->data + ar0*a->s0 + 4*astride;
+        T *ai5 = a->data + ar0*a->s0 + 5*astride;
+        T *ai6 = a->data + ar0*a->s0 + 6*astride;
+        T *ai7 = a->data + ar0*a->s0 + 7*astride;
+
         for (int k=0; k < a->d1; k++) {  // full dimension walk
-            T *__restrict__ ai = a->data + ar0*a->s0 + k;  // a[i, :] row
             T *__restrict__ bj = b->data + k*b->s0 + bc0;  // 
             
             // Left half of C. 8 of C<-A*B
             __m256 regBL = _mm256_load_ps(bj);
             __m256 regBR = _mm256_load_ps(bj+8);
-            T* pa;
-            
-            pa = ai + 0*astride;
             __m256 regA;
-            regA = _mm256_broadcast_ss(ai + 0*astride);
+            regA = _mm256_broadcast_ss(ai0 + k);
             regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(regA, regBL));
             regD0 = _mm256_add_ps(regD0, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai + 1*astride);
+            regA = _mm256_broadcast_ss(ai1 + k);
             regC1 = _mm256_add_ps(regC1, _mm256_mul_ps(regA, regBL));
             regD1 = _mm256_add_ps(regD1, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai + 2*astride);
+            regA = _mm256_broadcast_ss(ai2 + k);
             regC2 = _mm256_add_ps(regC2, _mm256_mul_ps(regA, regBL));
             regD2 = _mm256_add_ps(regD2, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai + 3*astride);
+            regA = _mm256_broadcast_ss(ai3 + k);
             regC3 = _mm256_add_ps(regC3, _mm256_mul_ps(regA, regBL));
             regD3 = _mm256_add_ps(regD3, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai + 4*astride);
+            regA = _mm256_broadcast_ss(ai4 + k);
             regC4 = _mm256_add_ps(regC4, _mm256_mul_ps(regA, regBL));
             regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai + 5*astride);
+            regA = _mm256_broadcast_ss(ai5 + k);
             regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(regA, regBL));
             regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai + 6*astride);
+            regA = _mm256_broadcast_ss(ai6 + k);
             regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(regA, regBL));
             regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai + 7*astride);
+            regA = _mm256_broadcast_ss(ai7 + k);
             regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(regA, regBL));
             regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(regA, regBR)); 
         }
