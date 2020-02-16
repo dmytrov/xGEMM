@@ -4,7 +4,18 @@
 #include "strided_array.h"
 #include "thread_pool.h"
 
-#define BLOCKSIZE 128
+#define ALG 2
+
+#if ALG == 1
+  #define BLOCKSIZE_A 8
+  #define BLOCKSIZE_B 8
+#elif ALG == 2
+  #define BLOCKSIZE_A 2
+  #define BLOCKSIZE_B 512
+#endif
+
+
+
 extern ThreadPool tp;
 
 template<class T>
@@ -28,19 +39,23 @@ public:
     }
 
     void execute() override {
-        execute2();
+        #if ALG == 1
+            execute2();
+        #elif ALG == 2
+            execute2();
+        #endif
     }
 
     void execute1() {
          // Use BLOCKSIZE columns to stay within chache
-        if (bc1-bc0 != BLOCKSIZE)  // 8 is OK
+        if (bc1-bc0 != BLOCKSIZE_B)  // 8 is OK
             throw std::invalid_argument("Number of columns must be BLOCKSIZE");
         
-        T acc[BLOCKSIZE] __attribute__((aligned(32))); // accumulator. Aligned    
+        T acc[BLOCKSIZE_B] __attribute__((aligned(32))); // accumulator. Aligned    
         
         for (int i=ar0; i<ar1; i++) {  // rows of a
             T *__restrict__ ai = a->data + i*a->s0;  // a[i, :] row
-            std::memset(acc, 0, BLOCKSIZE*sizeof(T));
+            std::memset(acc, 0, BLOCKSIZE_B*sizeof(T));
             
             for (int j=bc0; j<bc1; j++) {  // columns of b
                 T *__restrict__ bj = b->data + j*b->s0;
@@ -60,23 +75,23 @@ public:
                 }
                 acc[j-bc0] = dot;
             } 
-            std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(T) * BLOCKSIZE); 
+            std::memcpy(c->data + i*c->s0 + bc0, acc, sizeof(T) * BLOCKSIZE_B); 
         }
     }
 
     void execute2() {
          // Use BLOCKSIZE columns to stay within chache
-        if (bc1-bc0 != BLOCKSIZE) // 128 is OK
+        if (bc1-bc0 != BLOCKSIZE_B) // 128 is OK
             throw std::invalid_argument("Number of columns must be BLOCKSIZE");
         
         for (int k=0; k < a->d1; ++k) {  // full dimension walk
             T *__restrict__ ai = a->data + ar0*a->s0 + k;  // a[i, :] row
             T *__restrict__ bj = b->data + k*b->s0 + bc0;  // 
             
-            for (int i=0; i<BLOCKSIZE; ++i) {  // rows of a
+            for (int i=0; i<ar1-ar0; ++i) {  // rows of a
                 T *__restrict__ pc = c->data + (ar0+i)*c->s0 + bc0;
                 T aij = ai[i*a->s0];
-                for (int j=0; j<BLOCKSIZE; ++j)
+                for (int j=0; j<bc1-bc0; ++j)
                     pc[j] += aij * bj[j];
             } 
         }
@@ -87,9 +102,9 @@ template<class T>
 void MM(StridedArray<T> *a, StridedArray<T> *b, StridedArray<T> *c)
 {
     // Partition on multiple independent tasks
-    for (int i=0; i<a->d0; i+=BLOCKSIZE)  // columns of b
-        for (int j=0; j<b->d1; j+=BLOCKSIZE)  // columns of b
-            tp.add_task(new MMJob<T>(a, i, i+BLOCKSIZE, b, j, j+BLOCKSIZE, c));
+    for (int i=0; i<a->d0; i+=BLOCKSIZE_A)  // columns of a
+        for (int j=0; j<b->d1; j+=BLOCKSIZE_B)  // columns of b
+            tp.add_task(new MMJob<T>(a, i, i+BLOCKSIZE_A, b, j, j+BLOCKSIZE_B, c));
     tp.wait_tasks_complete();
 }
 
