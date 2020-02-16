@@ -4,7 +4,7 @@
 #include "strided_array.h"
 #include "thread_pool.h"
 
-#define BLOCKSIZE 8
+#define BLOCKSIZE 128
 extern ThreadPool tp;
 
 template<class T>
@@ -28,22 +28,22 @@ public:
     }
 
     void execute() override {
-        execute1();
+        execute2();
     }
 
     void execute1() {
-         // Use 8 columns to stay within chache
-        if (bc1-bc0 != BLOCKSIZE)
+         // Use BLOCKSIZE columns to stay within chache
+        if (bc1-bc0 != BLOCKSIZE)  // 8 is OK
             throw std::invalid_argument("Number of columns must be BLOCKSIZE");
         
         T acc[BLOCKSIZE] __attribute__((aligned(32))); // accumulator. Aligned    
         
         for (int i=ar0; i<ar1; i++) {  // rows of a
-            T *ai = a->data + i*a->s0;  // a[i, :] row
+            T *__restrict__ ai = a->data + i*a->s0;  // a[i, :] row
             std::memset(acc, 0, BLOCKSIZE*sizeof(T));
             
             for (int j=bc0; j<bc1; j++) {  // columns of b
-                T *bj = b->data + j*b->s0;
+                T *__restrict__ bj = b->data + j*b->s0;
 
                 T dot = 0;
                 int k = 0;
@@ -65,27 +65,19 @@ public:
     }
 
     void execute2() {
-         // Use 8 columns to stay within chache
-        if (bc1-bc0 != BLOCKSIZE)
+         // Use BLOCKSIZE columns to stay within chache
+        if (bc1-bc0 != BLOCKSIZE) // 128 is OK
             throw std::invalid_argument("Number of columns must be BLOCKSIZE");
         
         for (int k=0; k < a->d1; ++k) {  // full dimension walk
-            T *ai = a->data + ar0*a->s0 + k;  // a[i, :] row
-            T *bj = b->data + k*b->s0 + bc0;  // 
+            T *__restrict__ ai = a->data + ar0*a->s0 + k;  // a[i, :] row
+            T *__restrict__ bj = b->data + k*b->s0 + bc0;  // 
             
-            int i = 0;
-            while (i<BLOCKSIZE) {  // rows of a
-                T *pc = c->data + (ar0+i)*c->s0 + bc0;
+            for (int i=0; i<BLOCKSIZE; ++i) {  // rows of a
+                T *__restrict__ pc = c->data + (ar0+i)*c->s0 + bc0;
                 T aij = ai[i*a->s0];
-                pc[0] += aij * bj[0];
-                pc[1] += aij * bj[1];
-                pc[2] += aij * bj[2];
-                pc[3] += aij * bj[3];
-                pc[4] += aij * bj[4];
-                pc[5] += aij * bj[5];
-                pc[6] += aij * bj[6];
-                pc[7] += aij * bj[7];
-                i++;
+                for (int j=0; j<BLOCKSIZE; ++j)
+                    pc[j] += aij * bj[j];
             } 
         }
     }

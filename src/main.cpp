@@ -7,7 +7,7 @@
 template<class T>
 double test()
 {
-    int n = 100*16;
+    int n = 1024;
     int m = 1;
     StridedArray<T> a(n, n, T(0.0));
     for (int i=0; i<n; i++)
