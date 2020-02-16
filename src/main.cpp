@@ -8,7 +8,7 @@ template<class T>
 double test()
 {
     int n = 1024;
-    int m = 3;
+    int m = 10;
     StridedArray<T> a(n, n, T(0.0));
     for (int i=0; i<n; i++)
         a.setitem(i, i, i);
@@ -32,8 +32,8 @@ double test()
 
 int main(void)
 {
-    printf("int:    %f GFLOPS\n", 1.0e-9 * test<int>());
+    //printf("int:    %f GFLOPS\n", 1.0e-9 * test<int>());
     printf("float:  %f GFLOPS\n", 1.0e-9 * test<float>());
-    printf("double: %f GFLOPS\n", 1.0e-9 * test<double>());
+    //printf("double: %f GFLOPS\n", 1.0e-9 * test<double>());
     return 0;
 }

@@ -1,10 +1,11 @@
 #ifndef LINALG_H
 #define LINALG_H
 
+#include <immintrin.h>
 #include "strided_array.h"
 #include "thread_pool.h"
 
-#define ALG 2
+#define ALG 3
 
 #if ALG == 1
   #define BLOCKSIZE_A 8
@@ -12,6 +13,9 @@
 #elif ALG == 2
   #define BLOCKSIZE_A 2
   #define BLOCKSIZE_B 512
+#elif ALG == 3
+  #define BLOCKSIZE_A 8
+  #define BLOCKSIZE_B 32
 #endif
 
 
@@ -43,6 +47,8 @@ public:
             execute2();
         #elif ALG == 2
             execute2();
+        #elif ALG == 3
+            execute3();
         #endif
     }
 
@@ -96,6 +102,30 @@ public:
             } 
         }
     }
+
+    void execute3() {
+         // Use BLOCKSIZE columns to stay within chache
+        if (bc1-bc0 != BLOCKSIZE_B) // 128 is OK
+            throw std::invalid_argument("Number of columns must be BLOCKSIZE");
+        
+        for (int k=0; k < a->d1; ++k) {  // full dimension walk
+            T *__restrict__ ai = a->data + ar0*a->s0 + k;  // a[i, :] row
+            T *__restrict__ bj = b->data + k*b->s0 + bc0;  // 
+            
+            for (int i=0; i<ar1-ar0; ++i) {  // rows of a
+                T *__restrict__ pc = c->data + (ar0+i)*c->s0 + bc0;
+                T * pa = ai + i*a->s0;
+                for (int j=0; j<bc1-bc0; j+=8) {
+                    __m256 regA = _mm256_broadcast_ss(pa);
+                    __m256 regB = _mm256_load_ps(bj+j);
+                    __m256 regC = _mm256_load_ps(pc+j);
+                    __m256 regAB = _mm256_mul_ps(regA, regB);
+                    _mm256_store_ps(pc+j, _mm256_add_ps(regC, regAB));
+                }
+            } 
+        }
+    }
+
 };
 
 template<class T>
