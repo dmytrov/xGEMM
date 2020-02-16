@@ -5,7 +5,14 @@
 #include "strided_array.h"
 #include "thread_pool.h"
 
-#define ALG 3
+// AVX has 32 registers. 
+// Each 256-bit register can hold 8 32-bit single or 4 64-fit double floats. 
+// This gives us 256 of 32-bit single floats.
+// Cache line is 64 bytes = 512 bits = 2 AVX registers.
+// Optimal block size is Nx16 of single floats.
+// 8x16 floats fit in 16 AVX registers to store the result.
+
+#define ALG 4
 
 #if ALG == 1
   #define BLOCKSIZE_A 8
@@ -16,6 +23,9 @@
 #elif ALG == 3
   #define BLOCKSIZE_A 2
   #define BLOCKSIZE_B 512
+#elif ALG == 4
+  #define BLOCKSIZE_A 8
+  #define BLOCKSIZE_B 16
 #endif
 
 
@@ -49,6 +59,8 @@ public:
             execute2();
         #elif ALG == 3
             execute3();
+        #elif ALG == 4
+            execute4();
         #endif
     }
 
@@ -124,6 +136,92 @@ public:
                 }
             } 
         }
+    }
+
+    void execute4() {
+        if (bc1-bc0 != 16) 
+            throw std::invalid_argument("Number of columns must be 16");
+        if (ar1-ar0 != 8) 
+            throw std::invalid_argument("Number of rows must be 8");
+        
+        // Load C in AVX
+        int astride = a->s0;
+        int cstride = c->s0;
+        T *__restrict__ pc = c->data + ar0*cstride + bc0;
+        __m256 regC0 = _mm256_load_ps(pc + 0*cstride);
+        __m256 regC1 = _mm256_load_ps(pc + 1*cstride);
+        __m256 regC2 = _mm256_load_ps(pc + 2*cstride);
+        __m256 regC3 = _mm256_load_ps(pc + 3*cstride);
+        __m256 regC4 = _mm256_load_ps(pc + 4*cstride);
+        __m256 regC5 = _mm256_load_ps(pc + 5*cstride);
+        __m256 regC6 = _mm256_load_ps(pc + 6*cstride);
+        __m256 regC7 = _mm256_load_ps(pc + 7*cstride);
+        T *__restrict__ pd = c->data + ar0*cstride + bc0 + 8;
+        __m256 regD0 = _mm256_load_ps(pd + 0*cstride);
+        __m256 regD1 = _mm256_load_ps(pd + 1*cstride);
+        __m256 regD2 = _mm256_load_ps(pd + 2*cstride);
+        __m256 regD3 = _mm256_load_ps(pd + 3*cstride);
+        __m256 regD4 = _mm256_load_ps(pd + 4*cstride);
+        __m256 regD5 = _mm256_load_ps(pd + 5*cstride);
+        __m256 regD6 = _mm256_load_ps(pd + 6*cstride);
+        __m256 regD7 = _mm256_load_ps(pd + 7*cstride);
+
+        
+        for (int k=0; k < a->d1; k++) {  // full dimension walk
+            T *__restrict__ ai = a->data + ar0*a->s0 + k;  // a[i, :] row
+            T *__restrict__ bj = b->data + k*b->s0 + bc0;  // 
+            
+            // Left half of C. 8 of C<-A*B
+            __m256 regBL = _mm256_load_ps(bj);
+            __m256 regBR = _mm256_load_ps(bj+8);
+            T* pa;
+            
+            pa = ai + 0*astride;
+            __m256 regA;
+            regA = _mm256_broadcast_ss(ai + 0*astride);
+            regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(regA, regBL));
+            regD0 = _mm256_add_ps(regD0, _mm256_mul_ps(regA, regBR));
+            regA = _mm256_broadcast_ss(ai + 1*astride);
+            regC1 = _mm256_add_ps(regC1, _mm256_mul_ps(regA, regBL));
+            regD1 = _mm256_add_ps(regD1, _mm256_mul_ps(regA, regBR));
+            regA = _mm256_broadcast_ss(ai + 2*astride);
+            regC2 = _mm256_add_ps(regC2, _mm256_mul_ps(regA, regBL));
+            regD2 = _mm256_add_ps(regD2, _mm256_mul_ps(regA, regBR));
+            regA = _mm256_broadcast_ss(ai + 3*astride);
+            regC3 = _mm256_add_ps(regC3, _mm256_mul_ps(regA, regBL));
+            regD3 = _mm256_add_ps(regD3, _mm256_mul_ps(regA, regBR));
+            regA = _mm256_broadcast_ss(ai + 4*astride);
+            regC4 = _mm256_add_ps(regC4, _mm256_mul_ps(regA, regBL));
+            regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(regA, regBR));
+            regA = _mm256_broadcast_ss(ai + 5*astride);
+            regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(regA, regBL));
+            regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(regA, regBR));
+            regA = _mm256_broadcast_ss(ai + 6*astride);
+            regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(regA, regBL));
+            regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(regA, regBR));
+            regA = _mm256_broadcast_ss(ai + 7*astride);
+            regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(regA, regBL));
+            regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(regA, regBR)); 
+        }
+        
+        // Store AVX in C
+        _mm256_store_ps(pc + 0*cstride, regC0);
+        _mm256_store_ps(pc + 1*cstride, regC1);
+        _mm256_store_ps(pc + 2*cstride, regC2);
+        _mm256_store_ps(pc + 3*cstride, regC3);
+        _mm256_store_ps(pc + 4*cstride, regC4);
+        _mm256_store_ps(pc + 5*cstride, regC5);
+        _mm256_store_ps(pc + 6*cstride, regC6);
+        _mm256_store_ps(pc + 7*cstride, regC7);
+        
+        _mm256_store_ps(pd + 0*cstride, regD0);
+        _mm256_store_ps(pd + 1*cstride, regD1);
+        _mm256_store_ps(pd + 2*cstride, regD2);
+        _mm256_store_ps(pd + 3*cstride, regD3);
+        _mm256_store_ps(pd + 4*cstride, regD4);
+        _mm256_store_ps(pd + 5*cstride, regD5);
+        _mm256_store_ps(pd + 6*cstride, regD6);
+        _mm256_store_ps(pd + 7*cstride, regD7); 
     }
 
 };

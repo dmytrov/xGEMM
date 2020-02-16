@@ -6,9 +6,10 @@
 #include <math.h>
 #include <boost/align/aligned_alloc.hpp>
 
+#define CACHE_LINE 64
 #define AVX256_ALIGNMENT 32
 #define AVX512_ALIGNMENT 64
-#define ALIGNMENT AVX256_ALIGNMENT
+#define ALIGNMENT CACHE_LINE
 
 template<class T>
 struct StridedArray {
