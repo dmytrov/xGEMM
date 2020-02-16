@@ -181,34 +181,25 @@ public:
             // Left half of C. 8 of C<-A*B
             __m256 regBL = _mm256_load_ps(bj);
             __m256 regBR = _mm256_load_ps(bj+8);
-            __m256 regA;
-            regA = _mm256_broadcast_ss(ai0 + k);
-            regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(regA, regBL));
-            regD0 = _mm256_add_ps(regD0, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai1 + k);
-            regC1 = _mm256_add_ps(regC1, _mm256_mul_ps(regA, regBL));
-            regD1 = _mm256_add_ps(regD1, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai2 + k);
-            regC2 = _mm256_add_ps(regC2, _mm256_mul_ps(regA, regBL));
-            regD2 = _mm256_add_ps(regD2, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai3 + k);
-            regC3 = _mm256_add_ps(regC3, _mm256_mul_ps(regA, regBL));
-            regD3 = _mm256_add_ps(regD3, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai4 + k);
-            regC4 = _mm256_add_ps(regC4, _mm256_mul_ps(regA, regBL));
-            regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai5 + k);
-            regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(regA, regBL));
-            regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai6 + k);
-            regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(regA, regBL));
-            regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(regA, regBR));
-            regA = _mm256_broadcast_ss(ai7 + k);
-            regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(regA, regBL));
-            regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(regA, regBR)); 
+            regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(_mm256_broadcast_ss(ai0 + k), regBL));
+            regD0 = _mm256_add_ps(regD0, _mm256_mul_ps(_mm256_broadcast_ss(ai0 + k), regBR));
+            regC1 = _mm256_add_ps(regC1, _mm256_mul_ps(_mm256_broadcast_ss(ai1 + k), regBL));
+            regD1 = _mm256_add_ps(regD1, _mm256_mul_ps(_mm256_broadcast_ss(ai1 + k), regBR));
+            regC2 = _mm256_add_ps(regC2, _mm256_mul_ps(_mm256_broadcast_ss(ai2 + k), regBL));
+            regD2 = _mm256_add_ps(regD2, _mm256_mul_ps(_mm256_broadcast_ss(ai2 + k), regBR));
+            regC3 = _mm256_add_ps(regC3, _mm256_mul_ps(_mm256_broadcast_ss(ai3 + k), regBL));
+            regD3 = _mm256_add_ps(regD3, _mm256_mul_ps(_mm256_broadcast_ss(ai3 + k), regBR));
+            regC4 = _mm256_add_ps(regC4, _mm256_mul_ps(_mm256_broadcast_ss(ai4 + k), regBL));
+            regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(_mm256_broadcast_ss(ai4 + k), regBR));
+            regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(_mm256_broadcast_ss(ai5 + k), regBL));
+            regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(_mm256_broadcast_ss(ai5 + k), regBR));
+            regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(_mm256_broadcast_ss(ai6 + k), regBL));
+            regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(_mm256_broadcast_ss(ai6 + k), regBR));
+            regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(_mm256_broadcast_ss(ai7 + k), regBL));
+            regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(_mm256_broadcast_ss(ai7 + k), regBR)); 
         }
         
-        // Store AVX in C
+        // Store AVX in C, left
         _mm256_store_ps(pc + 0*cstride, regC0);
         _mm256_store_ps(pc + 1*cstride, regC1);
         _mm256_store_ps(pc + 2*cstride, regC2);
@@ -217,7 +208,7 @@ public:
         _mm256_store_ps(pc + 5*cstride, regC5);
         _mm256_store_ps(pc + 6*cstride, regC6);
         _mm256_store_ps(pc + 7*cstride, regC7);
-        
+        // Store AVX in C, right
         _mm256_store_ps(pd + 0*cstride, regD0);
         _mm256_store_ps(pd + 1*cstride, regD1);
         _mm256_store_ps(pd + 2*cstride, regD2);
