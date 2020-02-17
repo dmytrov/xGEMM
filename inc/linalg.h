@@ -173,7 +173,12 @@ public:
         
         // Load C in AVX
         int astride = a->s0;
+        int bstride = b->s0;
         int cstride = c->s0;
+
+        T* astart = a->data + ar0*a->s0;
+        T* bstart = b->data + bc0;
+        
         T *__restrict__ pc = c->data + ar0*cstride + bc0;
         __m256 regC0 = _mm256_load_ps(pc + 0*cstride);
         __m256 regC1 = _mm256_load_ps(pc + 0*cstride);
@@ -193,51 +198,45 @@ public:
         __m256 regD6 = _mm256_load_ps(pd + 6*cstride);
         __m256 regD7 = _mm256_load_ps(pd + 7*cstride);
 
-        alignas(CACHE_LINE) T* ai[8];
-        for (int i=0; i<8; i++)
-            ai[i] = a->data + ar0*a->s0 + i*astride;  // a[i, :] row
+        const int offset0 = astride * 0;  // a[i, :] row
+        const int offset1 = astride * 1;
+        const int offset2 = astride * 2;
+        const int offset3 = astride * 3;
+        const int offset4 = astride * 4;
+        const int offset5 = astride * 5;
+        const int offset6 = astride * 6;
+        const int offset7 = astride * 7;
         
         for (int k=0; k < a->d1; k++) {  // full dimension walk
-            T *__restrict__ bj = b->data + k*b->s0 + bc0;  // 
-
             // Left half of C. 8 of C<-A*B
-            __m256 regBL = _mm256_load_ps(bj);
-            __m256 regBR = _mm256_load_ps(bj+8);
+            __m256 regBL = _mm256_load_ps(bstart);
+            __m256 regBR = _mm256_load_ps(bstart + 8);
 
 #define USE_PREFETCH4
 #ifdef USE_PREFETCH4
             // Prefetch 
             #define FLOATSINCACHELINE4 16
             #define PREFETCHAHEAD4 8
-            if (k % FLOATSINCACHELINE4 == 0 && k < a->d1 - PREFETCHAHEAD4) {
-                _mm_prefetch(ai[0] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-                _mm_prefetch(ai[1] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-                _mm_prefetch(ai[2] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-                _mm_prefetch(ai[3] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-                _mm_prefetch(ai[4] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-                _mm_prefetch(ai[5] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-                _mm_prefetch(ai[6] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-                _mm_prefetch(ai[7] + k + PREFETCHAHEAD4, _MM_HINT_T0);
-            }
-            _mm_prefetch(bj + b->s0*PREFETCHAHEAD4, _MM_HINT_T0);
+            _mm_prefetch(bstart + bstride*PREFETCHAHEAD4, _MM_HINT_T0);
 #endif
-
-            regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(_mm256_broadcast_ss(ai[0] + k), regBL));
-            regD0 = _mm256_add_ps(regD0, _mm256_mul_ps(_mm256_broadcast_ss(ai[0] + k), regBR));
-            regC1 = _mm256_add_ps(regC1, _mm256_mul_ps(_mm256_broadcast_ss(ai[1] + k), regBL));
-            regD1 = _mm256_add_ps(regD1, _mm256_mul_ps(_mm256_broadcast_ss(ai[1] + k), regBR));
-            regC2 = _mm256_add_ps(regC2, _mm256_mul_ps(_mm256_broadcast_ss(ai[2] + k), regBL));
-            regD2 = _mm256_add_ps(regD2, _mm256_mul_ps(_mm256_broadcast_ss(ai[2] + k), regBR));
-            regC3 = _mm256_add_ps(regC3, _mm256_mul_ps(_mm256_broadcast_ss(ai[3] + k), regBL));
-            regD3 = _mm256_add_ps(regD3, _mm256_mul_ps(_mm256_broadcast_ss(ai[3] + k), regBR));
-            regC4 = _mm256_add_ps(regC4, _mm256_mul_ps(_mm256_broadcast_ss(ai[4] + k), regBL));
-            regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(_mm256_broadcast_ss(ai[4] + k), regBR));
-            regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(_mm256_broadcast_ss(ai[5] + k), regBL));
-            regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(_mm256_broadcast_ss(ai[5] + k), regBR));
-            regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(_mm256_broadcast_ss(ai[6] + k), regBL));
-            regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(_mm256_broadcast_ss(ai[6] + k), regBR));
-            regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(_mm256_broadcast_ss(ai[7] + k), regBL));
-            regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(_mm256_broadcast_ss(ai[7] + k), regBR)); 
+            regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(_mm256_set1_ps(astart[offset0]), regBL));
+            regD0 = _mm256_add_ps(regD0, _mm256_mul_ps(_mm256_set1_ps(astart[offset0]), regBR));
+            regC1 = _mm256_add_ps(regC1, _mm256_mul_ps(_mm256_set1_ps(astart[offset1]), regBL));
+            regD1 = _mm256_add_ps(regD1, _mm256_mul_ps(_mm256_set1_ps(astart[offset1]), regBR));
+            regC2 = _mm256_add_ps(regC2, _mm256_mul_ps(_mm256_set1_ps(astart[offset2]), regBL));
+            regD2 = _mm256_add_ps(regD2, _mm256_mul_ps(_mm256_set1_ps(astart[offset2]), regBR));
+            regC3 = _mm256_add_ps(regC3, _mm256_mul_ps(_mm256_set1_ps(astart[offset3]), regBL));
+            regD3 = _mm256_add_ps(regD3, _mm256_mul_ps(_mm256_set1_ps(astart[offset3]), regBR));
+            regC4 = _mm256_add_ps(regC4, _mm256_mul_ps(_mm256_set1_ps(astart[offset4]), regBL));
+            regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(_mm256_set1_ps(astart[offset4]), regBR));
+            regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(_mm256_set1_ps(astart[offset5]), regBL));
+            regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(_mm256_set1_ps(astart[offset5]), regBR));
+            regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(_mm256_set1_ps(astart[offset6]), regBL));
+            regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(_mm256_set1_ps(astart[offset6]), regBR));
+            regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(_mm256_set1_ps(astart[offset7]), regBL));
+            regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(_mm256_set1_ps(astart[offset7]), regBR)); 
+            astart++;
+            bstart += bstride;
         }
         
         // Store AVX in C, left
