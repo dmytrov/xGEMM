@@ -8,18 +8,18 @@
 // AVX has 32 registers. 
 // Each 256-bit register can hold 8 32-bit single or 4 64-fit double floats. 
 // This gives us 256 of 32-bit single floats.
-// Cache line is 64 bytes = 512 bits = 2 AVX registers.
+// Cache line is 64 bytes = 512 bits = 2 AVX registers = 16 single floats.
 // Optimal block size is Nx16 of single floats.
 // 8x16 floats fit in 16 AVX registers to store the result.
 
-#define ALG 4
+#define ALG 4 
 
 #if ALG == 1
-  #define BLOCKSIZE_A 8
-  #define BLOCKSIZE_B 8
+  #define BLOCKSIZE_A 256
+  #define BLOCKSIZE_B 256
 #elif ALG == 2
-  #define BLOCKSIZE_A 2
-  #define BLOCKSIZE_B 512
+  #define BLOCKSIZE_A 256
+  #define BLOCKSIZE_B 256
 #elif ALG == 3
   #define BLOCKSIZE_A 2
   #define BLOCKSIZE_B 512
@@ -54,7 +54,7 @@ public:
 
     void execute() override {
         #if ALG == 1
-            execute2();
+            execute1();
         #elif ALG == 2
             execute2();
         #elif ALG == 3
@@ -181,6 +181,25 @@ public:
             // Left half of C. 8 of C<-A*B
             __m256 regBL = _mm256_load_ps(bj);
             __m256 regBR = _mm256_load_ps(bj+8);
+
+#define USE_PREFETCH
+#ifdef USE_PREFETCH
+            // Prefetch 
+            #define CACHELINESIZE 16
+            #define PREFETCHAHEAD 4
+            if (k % CACHELINESIZE == 0 && k < a->d1 - PREFETCHAHEAD) {
+                _mm_prefetch(ai0 + k + PREFETCHAHEAD, _MM_HINT_T0);
+                _mm_prefetch(ai1 + k + PREFETCHAHEAD, _MM_HINT_T0);
+                _mm_prefetch(ai2 + k + PREFETCHAHEAD, _MM_HINT_T0);
+                _mm_prefetch(ai3 + k + PREFETCHAHEAD, _MM_HINT_T0);
+                _mm_prefetch(ai4 + k + PREFETCHAHEAD, _MM_HINT_T0);
+                _mm_prefetch(ai5 + k + PREFETCHAHEAD, _MM_HINT_T0);
+                _mm_prefetch(ai6 + k + PREFETCHAHEAD, _MM_HINT_T0);
+                _mm_prefetch(ai7 + k + PREFETCHAHEAD, _MM_HINT_T0);
+            }
+            _mm_prefetch(bj + b->s0*PREFETCHAHEAD, _MM_HINT_T0);
+#endif
+
             regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(_mm256_broadcast_ss(ai0 + k), regBL));
             regD0 = _mm256_add_ps(regD0, _mm256_mul_ps(_mm256_broadcast_ss(ai0 + k), regBR));
             regC1 = _mm256_add_ps(regC1, _mm256_mul_ps(_mm256_broadcast_ss(ai1 + k), regBL));
