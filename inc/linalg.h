@@ -391,11 +391,17 @@ public:
 template<class T>
 void MM(StridedArray<T> *a, StridedArray<T> *b, StridedArray<T> *c)
 {
-    // Partition on multiple independent tasks
-    for (int i=0; i+BLOCKSIZE_A<=a->d0; i+=BLOCKSIZE_A)  // columns of a
-        for (int j=0; j+BLOCKSIZE_B<=b->d1; j+=BLOCKSIZE_B)  // columns of b
-            tp.add_task(new MMJob<T>(a, i, i+BLOCKSIZE_A, b, j, j+BLOCKSIZE_B, c));
-    tp.wait_tasks_complete();
+    if (NUM_WORKERS > 1) {
+        // Partition on multiple independent tasks
+        for (int i=0; i+BLOCKSIZE_A<=a->d0; i+=BLOCKSIZE_A)  // columns of a
+            for (int j=0; j+BLOCKSIZE_B<=b->d1; j+=BLOCKSIZE_B)  // columns of b
+                tp.add_task(new MMJob<T>(a, i, i+BLOCKSIZE_A, b, j, j+BLOCKSIZE_B, c));
+        tp.wait_tasks_complete();
+    } else {
+        for (int i=0; i+BLOCKSIZE_A<=a->d0; i+=BLOCKSIZE_A)  // columns of a
+            for (int j=0; j+BLOCKSIZE_B<=b->d1; j+=BLOCKSIZE_B)  // columns of b
+                MMJob<T>(a, i, i+BLOCKSIZE_A, b, j, j+BLOCKSIZE_B, c).execute();
+    }
 }
 
 #endif // LINALG_H
