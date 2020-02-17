@@ -27,7 +27,7 @@
   #define BLOCKSIZE_A 2
   #define BLOCKSIZE_B 512
 #elif ALG == 4
-  #define BLOCKSIZE_A 8
+  #define BLOCKSIZE_A 6
   #define BLOCKSIZE_B 16
 #elif ALG == 5
   #define BLOCKSIZE_A 4
@@ -168,8 +168,8 @@ public:
     void execute4() {
         if (bc1-bc0 != 16) 
             throw std::invalid_argument("Number of columns must be 16");
-        if (ar1-ar0 != 8) 
-            throw std::invalid_argument("Number of rows must be 8");
+        if (ar1-ar0 != 6) 
+            throw std::invalid_argument("Number of rows must be 6");
         
         // Load C in AVX
         int astride = a->s0;
@@ -186,8 +186,6 @@ public:
         __m256 regC3 = _mm256_load_ps(pc + 0*cstride);
         __m256 regC4 = _mm256_load_ps(pc + 0*cstride);
         __m256 regC5 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC6 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC7 = _mm256_load_ps(pc + 0*cstride);
         T *__restrict__ pd = c->data + ar0*cstride + bc0 + 8;
         __m256 regD0 = _mm256_load_ps(pd + 0*cstride);
         __m256 regD1 = _mm256_load_ps(pd + 1*cstride);
@@ -195,17 +193,13 @@ public:
         __m256 regD3 = _mm256_load_ps(pd + 3*cstride);
         __m256 regD4 = _mm256_load_ps(pd + 4*cstride);
         __m256 regD5 = _mm256_load_ps(pd + 5*cstride);
-        __m256 regD6 = _mm256_load_ps(pd + 6*cstride);
-        __m256 regD7 = _mm256_load_ps(pd + 7*cstride);
-
+  
         const int offset0 = astride * 0;  // a[i, :] row
         const int offset1 = astride * 1;
         const int offset2 = astride * 2;
         const int offset3 = astride * 3;
         const int offset4 = astride * 4;
         const int offset5 = astride * 5;
-        const int offset6 = astride * 6;
-        const int offset7 = astride * 7;
         
         for (int k=0; k < a->d1; k++) {  // full dimension walk
             // Left half of C. 8 of C<-A*B
@@ -231,10 +225,6 @@ public:
             regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(_mm256_set1_ps(astart[offset4]), regBR));
             regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(_mm256_set1_ps(astart[offset5]), regBL));
             regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(_mm256_set1_ps(astart[offset5]), regBR));
-            regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(_mm256_set1_ps(astart[offset6]), regBL));
-            regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(_mm256_set1_ps(astart[offset6]), regBR));
-            regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(_mm256_set1_ps(astart[offset7]), regBL));
-            regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(_mm256_set1_ps(astart[offset7]), regBR)); 
             astart++;
             bstart += bstride;
         }
@@ -246,8 +236,6 @@ public:
         _mm256_store_ps(pc + 3*cstride, regC3);
         _mm256_store_ps(pc + 4*cstride, regC4);
         _mm256_store_ps(pc + 5*cstride, regC5);
-        _mm256_store_ps(pc + 6*cstride, regC6);
-        _mm256_store_ps(pc + 7*cstride, regC7);
         // Store AVX in C, right
         _mm256_store_ps(pd + 0*cstride, regD0);
         _mm256_store_ps(pd + 1*cstride, regD1);
@@ -255,8 +243,6 @@ public:
         _mm256_store_ps(pd + 3*cstride, regD3);
         _mm256_store_ps(pd + 4*cstride, regD4);
         _mm256_store_ps(pd + 5*cstride, regD5);
-        _mm256_store_ps(pd + 6*cstride, regD6);
-        _mm256_store_ps(pd + 7*cstride, regD7); 
     }
 
     
@@ -375,8 +361,8 @@ template<class T>
 void MM(StridedArray<T> *a, StridedArray<T> *b, StridedArray<T> *c)
 {
     // Partition on multiple independent tasks
-    for (int i=0; i<a->d0; i+=BLOCKSIZE_A)  // columns of a
-        for (int j=0; j<b->d1; j+=BLOCKSIZE_B)  // columns of b
+    for (int i=0; i+BLOCKSIZE_A<=a->d0; i+=BLOCKSIZE_A)  // columns of a
+        for (int j=0; j+BLOCKSIZE_B<=b->d1; j+=BLOCKSIZE_B)  // columns of b
             tp.add_task(new MMJob<T>(a, i, i+BLOCKSIZE_A, b, j, j+BLOCKSIZE_B, c));
     tp.wait_tasks_complete();
 }
