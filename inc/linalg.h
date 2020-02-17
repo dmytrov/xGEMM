@@ -14,7 +14,10 @@
 
 #define ALG 4 
 
-#if ALG == 1
+#if ALG == 0
+  #define BLOCKSIZE_A 16
+  #define BLOCKSIZE_B 16
+#elif ALG == 1
   #define BLOCKSIZE_A 256
   #define BLOCKSIZE_B 256
 #elif ALG == 2
@@ -56,7 +59,9 @@ public:
     }
 
     void execute() override {
-        #if ALG == 1
+        #if ALG == 0
+            execute0();
+        #elif ALG == 1
             execute1();
         #elif ALG == 2
             execute2();
@@ -67,6 +72,23 @@ public:
         #elif ALG == 5
             execute5();
         #endif
+    }
+
+    void execute0() {
+        T *A[ar1-ar0];
+        for (int i=0; i<ar1-ar0; i++)
+            A[i] = a->data + i*a->s0;
+        T *B[b->d0];
+        for (int j=0; j<b->d0; j++)
+            B[j] = b->data + j*b->s0 + bc0;
+        T *C[ar1-ar0];
+        for (int i=0; i<ar1-ar0; i++)
+            C[i] = c->data + i*a->s0 + bc0;
+
+        for (int i=0; i<ar1-ar0; i++)
+            for (int j=0; j<bc1-bc0; j++)
+                for (int k=0; k<a->d1; k++)
+                    C[i][j] += A[i][k] * B[k][j];
     }
 
     void execute1() {
