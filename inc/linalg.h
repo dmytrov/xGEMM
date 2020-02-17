@@ -305,8 +305,8 @@ public:
 //#define USE_PREFETCH5
 #ifdef USE_PREFETCH5
             // Prefetch 
-            #define PREFETCHAHEAD5 32
-            _mm_prefetch(ai0 + k + PREFETCHAHEA5D, _MM_HINT_T0);
+            #define PREFETCHAHEAD5 16
+            _mm_prefetch(ai0 + k + PREFETCHAHEAD5, _MM_HINT_T0);
             _mm_prefetch(ai1 + k + PREFETCHAHEAD5, _MM_HINT_T0);
             _mm_prefetch(ai2 + k + PREFETCHAHEAD5, _MM_HINT_T0);
             _mm_prefetch(ai3 + k + PREFETCHAHEAD5, _MM_HINT_T0);
@@ -347,6 +347,27 @@ public:
             regC33 = _mm256_add_ps(regC33, _mm256_mul_ps(regA3, regB3));
         }
         // Store C
+        #define ARRAY8SUM(x) (x[0] + x[1] + x[2] + x[3] + x[4] + x[5] + x[6] + x[7])
+        T *__restrict__ pc = c->data + ar0*cstride + bc0;
+        pc[0*cstride + 0] = ARRAY8SUM(regC00);
+        pc[0*cstride + 1] = ARRAY8SUM(regC01);
+        pc[0*cstride + 2] = ARRAY8SUM(regC02);
+        pc[0*cstride + 3] = ARRAY8SUM(regC03);
+
+        pc[1*cstride + 0] = ARRAY8SUM(regC10);
+        pc[1*cstride + 1] = ARRAY8SUM(regC11);
+        pc[1*cstride + 2] = ARRAY8SUM(regC12);
+        pc[1*cstride + 3] = ARRAY8SUM(regC13);
+
+        pc[2*cstride + 0] = ARRAY8SUM(regC20);
+        pc[2*cstride + 1] = ARRAY8SUM(regC21);
+        pc[2*cstride + 2] = ARRAY8SUM(regC22);
+        pc[2*cstride + 3] = ARRAY8SUM(regC23);
+
+        pc[3*cstride + 0] = ARRAY8SUM(regC30);
+        pc[3*cstride + 1] = ARRAY8SUM(regC31);
+        pc[3*cstride + 2] = ARRAY8SUM(regC32);
+        pc[3*cstride + 3] = ARRAY8SUM(regC33);
         
     }
 };
