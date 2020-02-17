@@ -26,6 +26,9 @@
 #elif ALG == 4
   #define BLOCKSIZE_A 8
   #define BLOCKSIZE_B 16
+#elif ALG == 5
+  #define BLOCKSIZE_A 4
+  #define BLOCKSIZE_B 4
 #endif
 
 
@@ -61,6 +64,8 @@ public:
             execute3();
         #elif ALG == 4
             execute4();
+        #elif ALG == 5
+            execute5();
         #endif
     }
 
@@ -177,22 +182,22 @@ public:
             __m256 regBL = _mm256_load_ps(bj);
             __m256 regBR = _mm256_load_ps(bj+8);
 
-#define USE_PREFETCH
-#ifdef USE_PREFETCH
+#define USE_PREFETCH4
+#ifdef USE_PREFETCH4
             // Prefetch 
-            #define FLOATSINCACHELINE 16
-            #define PREFETCHAHEAD 8
-            if (k % FLOATSINCACHELINE == 0 && k < a->d1 - PREFETCHAHEAD) {
-                _mm_prefetch(ai[0] + k + PREFETCHAHEAD, _MM_HINT_T0);
-                _mm_prefetch(ai[1] + k + PREFETCHAHEAD, _MM_HINT_T0);
-                _mm_prefetch(ai[2] + k + PREFETCHAHEAD, _MM_HINT_T0);
-                _mm_prefetch(ai[3] + k + PREFETCHAHEAD, _MM_HINT_T0);
-                _mm_prefetch(ai[4] + k + PREFETCHAHEAD, _MM_HINT_T0);
-                _mm_prefetch(ai[5] + k + PREFETCHAHEAD, _MM_HINT_T0);
-                _mm_prefetch(ai[6] + k + PREFETCHAHEAD, _MM_HINT_T0);
-                _mm_prefetch(ai[7] + k + PREFETCHAHEAD, _MM_HINT_T0);
+            #define FLOATSINCACHELINE4 16
+            #define PREFETCHAHEAD4 8
+            if (k % FLOATSINCACHELINE4 == 0 && k < a->d1 - PREFETCHAHEAD4) {
+                _mm_prefetch(ai[0] + k + PREFETCHAHEAD4, _MM_HINT_T0);
+                _mm_prefetch(ai[1] + k + PREFETCHAHEAD4, _MM_HINT_T0);
+                _mm_prefetch(ai[2] + k + PREFETCHAHEAD4, _MM_HINT_T0);
+                _mm_prefetch(ai[3] + k + PREFETCHAHEAD4, _MM_HINT_T0);
+                _mm_prefetch(ai[4] + k + PREFETCHAHEAD4, _MM_HINT_T0);
+                _mm_prefetch(ai[5] + k + PREFETCHAHEAD4, _MM_HINT_T0);
+                _mm_prefetch(ai[6] + k + PREFETCHAHEAD4, _MM_HINT_T0);
+                _mm_prefetch(ai[7] + k + PREFETCHAHEAD4, _MM_HINT_T0);
             }
-            _mm_prefetch(bj + b->s0*PREFETCHAHEAD, _MM_HINT_T0);
+            _mm_prefetch(bj + b->s0*PREFETCHAHEAD4, _MM_HINT_T0);
 #endif
 
             regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(_mm256_broadcast_ss(ai[0] + k), regBL));
@@ -233,6 +238,95 @@ public:
         _mm256_store_ps(pd + 7*cstride, regD7); 
     }
 
+    
+    void execute5() {
+        if (bc1-bc0 != 4) 
+            throw std::invalid_argument("Number of columns must be 4");
+        if (ar1-ar0 != 4) 
+            throw std::invalid_argument("Number of rows must be 4");
+        
+        // Load C in AVX
+        int astride = a->s0;
+        int bstride = b->s0;
+        int cstride = c->s0;
+
+        __m256 regC00 = _mm256_set1_ps(0);
+        __m256 regC01 = _mm256_set1_ps(0);
+        __m256 regC02 = _mm256_set1_ps(0);
+        __m256 regC03 = _mm256_set1_ps(0);
+        __m256 regC10 = _mm256_set1_ps(0);
+        __m256 regC11 = _mm256_set1_ps(0);
+        __m256 regC12 = _mm256_set1_ps(0);
+        __m256 regC13 = _mm256_set1_ps(0);
+        __m256 regC20 = _mm256_set1_ps(0);
+        __m256 regC21 = _mm256_set1_ps(0);
+        __m256 regC22 = _mm256_set1_ps(0);
+        __m256 regC23 = _mm256_set1_ps(0);
+        __m256 regC30 = _mm256_set1_ps(0);
+        __m256 regC31 = _mm256_set1_ps(0);
+        __m256 regC32 = _mm256_set1_ps(0);
+        __m256 regC33 = _mm256_set1_ps(0);
+        
+        T *ai0 = a->data + ar0*a->s0 + 0*astride;  // a[i, :] row
+        T *ai1 = a->data + ar0*a->s0 + 1*astride;  // a[i, :] row
+        T *ai2 = a->data + ar0*a->s0 + 2*astride;  // a[i, :] row
+        T *ai3 = a->data + ar0*a->s0 + 3*astride;  // a[i, :] row
+
+        T *bj0 = b->data + bc0*b->s0 + 0*bstride;  // b[:, j] column
+        T *bj1 = b->data + bc0*b->s0 + 1*bstride;  // b[:, j] column
+        T *bj2 = b->data + bc0*b->s0 + 2*bstride;  // b[:, j] column
+        T *bj3 = b->data + bc0*b->s0 + 3*bstride;  // b[:, j] column
+        
+        
+        for (int k=0; k < a->d1; k+=8) {  // full dimension walk
+            
+//#define USE_PREFETCH5
+#ifdef USE_PREFETCH5
+            // Prefetch 
+            #define PREFETCHAHEAD5 32
+            _mm_prefetch(ai0 + k + PREFETCHAHEA5D, _MM_HINT_T0);
+            _mm_prefetch(ai1 + k + PREFETCHAHEAD5, _MM_HINT_T0);
+            _mm_prefetch(ai2 + k + PREFETCHAHEAD5, _MM_HINT_T0);
+            _mm_prefetch(ai3 + k + PREFETCHAHEAD5, _MM_HINT_T0);
+
+            _mm_prefetch(bj0 + k + PREFETCHAHEAD5, _MM_HINT_T0);
+            _mm_prefetch(bj1 + k + PREFETCHAHEAD5, _MM_HINT_T0);
+            _mm_prefetch(bj2 + k + PREFETCHAHEAD5, _MM_HINT_T0);
+            _mm_prefetch(bj3 + k + PREFETCHAHEAD5, _MM_HINT_T0);
+#endif
+            __m256 regA0 = _mm256_load_ps(ai0 + k);
+            __m256 regA1 = _mm256_load_ps(ai1 + k);
+            __m256 regA2 = _mm256_load_ps(ai2 + k);
+            __m256 regA3 = _mm256_load_ps(ai3 + k);
+
+            __m256 regB0 = _mm256_load_ps(bj0 + k);
+            __m256 regB1 = _mm256_load_ps(bj1 + k);
+            __m256 regB2 = _mm256_load_ps(bj2 + k);
+            __m256 regB3 = _mm256_load_ps(bj3 + k);
+
+            regC00 = _mm256_add_ps(regC00, _mm256_mul_ps(regA0, regB0));
+            regC01 = _mm256_add_ps(regC01, _mm256_mul_ps(regA0, regB1));
+            regC02 = _mm256_add_ps(regC02, _mm256_mul_ps(regA0, regB2));
+            regC03 = _mm256_add_ps(regC03, _mm256_mul_ps(regA0, regB3));
+
+            regC10 = _mm256_add_ps(regC10, _mm256_mul_ps(regA1, regB0));
+            regC11 = _mm256_add_ps(regC11, _mm256_mul_ps(regA1, regB1));
+            regC12 = _mm256_add_ps(regC12, _mm256_mul_ps(regA1, regB2));
+            regC13 = _mm256_add_ps(regC13, _mm256_mul_ps(regA1, regB3));
+
+            regC20 = _mm256_add_ps(regC20, _mm256_mul_ps(regA2, regB0));
+            regC21 = _mm256_add_ps(regC21, _mm256_mul_ps(regA2, regB1));
+            regC22 = _mm256_add_ps(regC22, _mm256_mul_ps(regA2, regB2));
+            regC23 = _mm256_add_ps(regC23, _mm256_mul_ps(regA2, regB3));
+
+            regC30 = _mm256_add_ps(regC30, _mm256_mul_ps(regA3, regB0));
+            regC31 = _mm256_add_ps(regC31, _mm256_mul_ps(regA3, regB1));
+            regC32 = _mm256_add_ps(regC32, _mm256_mul_ps(regA3, regB2));
+            regC33 = _mm256_add_ps(regC33, _mm256_mul_ps(regA3, regB3));
+        }
+        // Store C
+        
+    }
 };
 
 template<class T>
