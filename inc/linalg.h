@@ -12,7 +12,7 @@
 // Optimal block size is Nx16 of single floats.
 // 8x16 floats fit in 16 AVX registers to store the result.
 
-#define ALG 4 
+#define ALG 4
 
 #if ALG == 0
   #define BLOCKSIZE_A 16
@@ -168,8 +168,8 @@ public:
     void execute4() {
         if (bc1-bc0 != 16) 
             throw std::invalid_argument("Number of columns must be 16");
-        if (ar1-ar0 != 6) 
-            throw std::invalid_argument("Number of rows must be 6");
+        if (ar1-ar0 != BLOCKSIZE_A) 
+            throw std::invalid_argument("Number of rows must be BLOCKSIZE_A");
         
         // Load C in AVX
         int astride = a->s0;
@@ -180,19 +180,29 @@ public:
         T* bstart = b->data + bc0;
         
         T *__restrict__ pc = c->data + ar0*cstride + bc0;
-        __m256 regC0 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC1 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC2 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC3 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC4 = _mm256_load_ps(pc + 0*cstride);
-        __m256 regC5 = _mm256_load_ps(pc + 0*cstride);
         T *__restrict__ pd = c->data + ar0*cstride + bc0 + 8;
+        __m256 regC0 = _mm256_load_ps(pc + 0*cstride);
         __m256 regD0 = _mm256_load_ps(pd + 0*cstride);
+        __m256 regC1 = _mm256_load_ps(pc + 1*cstride);
         __m256 regD1 = _mm256_load_ps(pd + 1*cstride);
+        __m256 regC2 = _mm256_load_ps(pc + 2*cstride);
         __m256 regD2 = _mm256_load_ps(pd + 2*cstride);
+        __m256 regC3 = _mm256_load_ps(pc + 3*cstride);
         __m256 regD3 = _mm256_load_ps(pd + 3*cstride);
+#if BLOCKSIZE_A >= 6        
+        __m256 regC4 = _mm256_load_ps(pc + 4*cstride);
         __m256 regD4 = _mm256_load_ps(pd + 4*cstride);
+        __m256 regC5 = _mm256_load_ps(pc + 5*cstride);
         __m256 regD5 = _mm256_load_ps(pd + 5*cstride);
+#endif
+#if BLOCKSIZE_A >= 7
+        __m256 regC6 = _mm256_load_ps(pc + 6*cstride);
+        __m256 regD6 = _mm256_load_ps(pd + 6*cstride);
+#endif
+#if BLOCKSIZE_A >= 8
+        __m256 regC7 = _mm256_load_ps(pc + 7*cstride);
+        __m256 regD7 = _mm256_load_ps(pd + 7*cstride);
+#endif
   
         const int offset0 = astride * 0;  // a[i, :] row
         const int offset1 = astride * 1;
@@ -200,6 +210,8 @@ public:
         const int offset3 = astride * 3;
         const int offset4 = astride * 4;
         const int offset5 = astride * 5;
+        const int offset6 = astride * 6;
+        const int offset7 = astride * 7;
         
         for (int k=0; k < a->d1; k++) {  // full dimension walk
             // Left half of C. 8 of C<-A*B
@@ -210,7 +222,7 @@ public:
 #ifdef USE_PREFETCH4
             // Prefetch 
             #define FLOATSINCACHELINE4 16
-            #define PREFETCHAHEAD4 8
+            #define PREFETCHAHEAD4 4
             _mm_prefetch(bstart + bstride*PREFETCHAHEAD4, _MM_HINT_T0);
 #endif
             regC0 = _mm256_add_ps(regC0, _mm256_mul_ps(_mm256_set1_ps(astart[offset0]), regBL));
@@ -221,28 +233,47 @@ public:
             regD2 = _mm256_add_ps(regD2, _mm256_mul_ps(_mm256_set1_ps(astart[offset2]), regBR));
             regC3 = _mm256_add_ps(regC3, _mm256_mul_ps(_mm256_set1_ps(astart[offset3]), regBL));
             regD3 = _mm256_add_ps(regD3, _mm256_mul_ps(_mm256_set1_ps(astart[offset3]), regBR));
+#if BLOCKSIZE_A >= 6        
             regC4 = _mm256_add_ps(regC4, _mm256_mul_ps(_mm256_set1_ps(astart[offset4]), regBL));
             regD4 = _mm256_add_ps(regD4, _mm256_mul_ps(_mm256_set1_ps(astart[offset4]), regBR));
             regC5 = _mm256_add_ps(regC5, _mm256_mul_ps(_mm256_set1_ps(astart[offset5]), regBL));
             regD5 = _mm256_add_ps(regD5, _mm256_mul_ps(_mm256_set1_ps(astart[offset5]), regBR));
+#endif
+#if BLOCKSIZE_A >= 7
+            regC6 = _mm256_add_ps(regC6, _mm256_mul_ps(_mm256_set1_ps(astart[offset6]), regBL));
+            regD6 = _mm256_add_ps(regD6, _mm256_mul_ps(_mm256_set1_ps(astart[offset6]), regBR));
+#endif
+#if BLOCKSIZE_A >= 8
+            regC7 = _mm256_add_ps(regC7, _mm256_mul_ps(_mm256_set1_ps(astart[offset7]), regBL));
+            regD7 = _mm256_add_ps(regD7, _mm256_mul_ps(_mm256_set1_ps(astart[offset7]), regBR));
+#endif
             astart++;
             bstart += bstride;
         }
         
         // Store AVX in C, left
         _mm256_store_ps(pc + 0*cstride, regC0);
-        _mm256_store_ps(pc + 1*cstride, regC1);
-        _mm256_store_ps(pc + 2*cstride, regC2);
-        _mm256_store_ps(pc + 3*cstride, regC3);
-        _mm256_store_ps(pc + 4*cstride, regC4);
-        _mm256_store_ps(pc + 5*cstride, regC5);
-        // Store AVX in C, right
         _mm256_store_ps(pd + 0*cstride, regD0);
+        _mm256_store_ps(pc + 1*cstride, regC1);
         _mm256_store_ps(pd + 1*cstride, regD1);
+        _mm256_store_ps(pc + 2*cstride, regC2);
         _mm256_store_ps(pd + 2*cstride, regD2);
+        _mm256_store_ps(pc + 3*cstride, regC3);
         _mm256_store_ps(pd + 3*cstride, regD3);
+#if BLOCKSIZE_A >= 6        
+        _mm256_store_ps(pc + 4*cstride, regC4);
         _mm256_store_ps(pd + 4*cstride, regD4);
+        _mm256_store_ps(pc + 5*cstride, regC5);
         _mm256_store_ps(pd + 5*cstride, regD5);
+#endif
+#if BLOCKSIZE_A >= 7
+        _mm256_store_ps(pc + 6*cstride, regC6);
+        _mm256_store_ps(pd + 6*cstride, regD6);
+#endif
+#if BLOCKSIZE_A >= 8
+        _mm256_store_ps(pc + 7*cstride, regC7);
+        _mm256_store_ps(pd + 7*cstride, regD7);
+#endif
     }
 
     
