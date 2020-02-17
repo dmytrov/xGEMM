@@ -5,12 +5,12 @@
 #include "strided_array.h"
 #include "thread_pool.h"
 
-// AVX has 32 registers. 
+// AVX has 16 registers. 
 // Each 256-bit register can hold 8 32-bit single or 4 64-fit double floats. 
-// This gives us 256 of 32-bit single floats.
+// This gives us 128 of 32-bit single floats.
 // Cache line is 64 bytes = 512 bits = 2 AVX registers = 16 single floats.
 // Optimal block size is Nx16 of single floats.
-// 8x16 floats fit in 16 AVX registers to store the result.
+// 7x16 floats fit in 14 AVX registers to store the result.
 
 #define ALG 4
 
