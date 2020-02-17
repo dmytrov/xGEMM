@@ -177,7 +177,7 @@ public:
 
         for (int k=0; k < a->d1; k++) {  // full dimension walk
             T *__restrict__ bj = b->data + k*b->s0 + bc0;  // 
-            
+
             // Left half of C. 8 of C<-A*B
             __m256 regBL = _mm256_load_ps(bj);
             __m256 regBR = _mm256_load_ps(bj+8);
@@ -186,7 +186,7 @@ public:
 #ifdef USE_PREFETCH
             // Prefetch 
             #define CACHELINESIZE 16
-            #define PREFETCHAHEAD 4
+            #define PREFETCHAHEAD 8
             if (k % CACHELINESIZE == 0 && k < a->d1 - PREFETCHAHEAD) {
                 _mm_prefetch(ai0 + k + PREFETCHAHEAD, _MM_HINT_T0);
                 _mm_prefetch(ai1 + k + PREFETCHAHEAD, _MM_HINT_T0);
